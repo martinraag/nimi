@@ -39,7 +39,7 @@ Resources:
                   - "route53:ListResourceRecordSets"
                 Resource: 
                 {% for hosted_zone in hosted_zones %}
-                  - "arn:aws:route53:::hostedZone/{{ hosted_zone }}"
+                  - "arn:aws:route53:::hostedzone/{{ hosted_zone }}"
                 {% endfor %}
             {% endif %}
               - Effect: "Allow"
