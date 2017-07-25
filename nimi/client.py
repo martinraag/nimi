@@ -28,9 +28,10 @@ def setup(url, hostname, secret, rate):
 def ping(url, hostname, secret):
     """Call the Lambda function to update the IP of the hostname"""
 
+    signature = hmac.new(secret.encode('utf-8'), hostname.encode('utf-8'), hashlib.sha256).hexdigest()
     payload = {
         'hostname': hostname,
-        'signature': hmac.new(secret.encode('utf-8'), hostname.encode('utf-8'), hashlib.sha256)
+        'signature': signature
     }
     requests.put(url, json.dumps(payload))
 
