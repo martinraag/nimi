@@ -31,10 +31,10 @@ def lambda_handler(event, context):
     if not hmac.compare_digest(signature, request['signature']):
         return Response.unauthorized('Unauthorized')
 
-    current_ip = get_record(config['hosted_zone_id'], request['hostname'])
+    current_ip = get_alias_record(config['hosted_zone_id'], request['hostname'])
     request_ip = event['requestContext']['identity']['sourceIp']
     if not current_ip or not current_ip == request_ip:
-        set_record(config['hosted_zone_id'], request['hostname'], request_ip)
+        set_alias_record(config['hosted_zone_id'], request['hostname'], request_ip)
 
     return Response.ok('Cool beans')
 
@@ -47,21 +47,22 @@ def get_configuration(hostname):
     return {key.split('__')[1].lower(): value for key, value in os.environ.items() if key in options}
 
 
-def get_record(zone_id, record_name):
+def get_alias_record(zone_id, record_name):
     record_sets = route53.list_resource_record_sets(
         HostedZoneId=zone_id,
         StartRecordName=record_name,
         StartRecordType='A',
         MaxItems='2'
     )
-    print('Found record sets: {}'.format(record_sets))
-    records = [record_set['ResourceRecords'] for record_set in record_sets['ResourceRecordSets'] if record_set['Name'] == record_name]
-    if len(records) > 1:
-        raise Exception('Multiple records found for record {}'.format(record_name))
-    return records[0]['Value'] if records else None
+    records = [
+        record_set['ResourceRecords'] for record_set in record_sets['ResourceRecordSets'] 
+        if compare_record(record_set['Name'], record_name)
+    ]
+    # TODO: Support multiple values
+    return records[0][0]['Value'] if records else None
 
 
-def set_record(zone_id, record_name, ip_address):
+def set_alias_record(zone_id, record_name, ip_address):
     route53.change_resource_record_sets(
         HostedZoneId=zone_id,
         ChangeBatch={
@@ -84,9 +85,12 @@ def set_record(zone_id, record_name, ip_address):
     )
 
 
+def compare_record(record_name, hostname):
+    return '{}.'.format(hostname) == record_name
+
+
 class Response(object):
     """Helper class to create Lambda proxy response"""
-
 
     @classmethod
     def ok(cls, message):

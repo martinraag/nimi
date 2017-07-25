@@ -2,6 +2,13 @@ import re
 import boto3
 
 
+# The following functions are imported here from the handler, instead of the other way around,
+# as it enables a simplified Lambda function deployment. By keeping the Lambda function a single
+# file, we don't need to package the modules for deployment or create an S3 bucket for storing said
+# package, which would become useless after the initial setup.
+from nimi.handler import get_alias_record, compare_record
+
+
 client = boto3.client('route53')
 
 
@@ -43,7 +50,7 @@ def find_hosted_zone(hostname):
 
     subdomains = SubdomainIterator(hostname)
     for subdomain in subdomains:
-        match = [zone for zone in hosted_zones if _compare_record(zone['Name'], subdomain)]
+        match = [zone for zone in hosted_zones if compare_record(zone['Name'], subdomain)]
         if match:
             return match[0]
 
@@ -52,22 +59,3 @@ def find_hosted_zone_id(hostname):
     hosted_zone = find_hosted_zone(hostname)
     if hosted_zone:
         return hosted_zone['Id'].split('/')[2]
-
-
-def get_alias_record(zone_id, record_name):
-    record_sets = client.list_resource_record_sets(
-        HostedZoneId=zone_id,
-        StartRecordName=record_name,
-        StartRecordType='A',
-        MaxItems='2'
-    )
-    records = [
-        record_set['ResourceRecords'] for record_set in record_sets['ResourceRecordSets'] 
-        if _compare_record(record_set['Name'], record_name)
-    ]
-    # TODO: Support multiple values
-    return records[0][0]['Value'] if records else None
-
-
-def _compare_record(record_name, hostname):
-    return '{}.'.format(hostname) == record_name
