@@ -1,9 +1,10 @@
 import os
 
 import click
+from terminaltables import SingleTable
 
 from nimi.stack import Stack
-from nimi.route53 import find_hosted_zone_id
+from nimi.route53 import find_hosted_zone_id, get_alias_record
 from nimi.function import Function, env_from_config
 
 
@@ -78,6 +79,27 @@ def remove(ctx, hostname):
 
     click.echo('☕️  Updating CloudFormation stack')
     stack.update(hosted_zones=hosted_zones, env=env)
+
+
+@cli.command()
+@click.pass_context
+def info(ctx):
+    """Print configuration"""
+
+    stack = ctx.obj['stack']
+    api_url = stack.get_output('ApiUrl')
+    function = Function(stack.get_output('LambdaFunctionName'))
+    config = function.get_config()
+
+    table_data = [
+        ['Hostname', 'Hosted Zone Id' ,'Current IP', 'Shared Secret']
+    ]
+    for hostname, options  in config.items():
+        current_ip = get_alias_record(options['hosted_zone_id'], hostname)
+        table_data.append([hostname, options['hosted_zone_id'], current_ip, options['shared_secret']])
+    table = SingleTable(table_data, 'Hosts')
+    click.echo('\n - API URL: {}\n'.format(api_url))
+    click.echo(table.table)
 
 
 @cli.command()
