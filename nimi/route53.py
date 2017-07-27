@@ -59,3 +59,30 @@ def find_hosted_zone_id(hostname):
     hosted_zone = find_hosted_zone(hostname)
     if hosted_zone:
         return hosted_zone['Id'].split('/')[2]
+
+
+def remove_alias_record(zone_id, record_name):
+    ip_address = get_alias_record(zone_id, record_name)
+    if not ip_address:
+        return
+
+    client.change_resource_record_sets(
+        HostedZoneId=zone_id,
+        ChangeBatch={
+            'Changes': [
+                {
+                    'Action': 'DELETE',
+                    'ResourceRecordSet': {
+                        'Name': record_name,
+                        'Type': 'A',
+                        'TTL': 900,
+                        'ResourceRecords': [
+                            {
+                                'Value': ip_address
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    )

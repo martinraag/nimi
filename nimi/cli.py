@@ -4,7 +4,7 @@ import click
 from terminaltables import SingleTable
 
 from nimi.stack import Stack
-from nimi.route53 import find_hosted_zone_id, get_alias_record
+from nimi.route53 import find_hosted_zone_id, get_alias_record, remove_alias_record
 from nimi.function import Function, env_from_config
 
 
@@ -71,6 +71,11 @@ def remove(ctx, hostname):
         click.echo('🤔  Hostname {} not found in configuration.'.format(hostname))
         return
 
+    # Remove Route53 record
+    click.echo('🔥  Removing DNS record')
+    remove_alias_record(config[hostname]['hosted_zone_id'], hostname)
+
+    # Remove hostname from configuration
     del config[hostname]
     env = env_from_config(config)
 
@@ -108,6 +113,15 @@ def destroy(ctx):
     """Remove AWS infrastructure"""
 
     stack = ctx.obj['stack']
+    
+    # Remove Route53 records
+    function = Function(stack.function_name)
+    config = function.get_config()
+    for hostname, options in config.items():
+        click.echo('🔥  Removing DNS record for {}'.format(hostname))
+        remove_alias_record(options['hosted_zone_id'], hostname)
+
+    # Remove stack
     click.echo('🔥  Removing CloudFormation stack')
     stack.destroy()
 
