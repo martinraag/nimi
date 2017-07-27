@@ -12,7 +12,7 @@ DEFAULT_STACK_NAME = 'nimi-dynamic-dns'
 
 
 @click.group()
-@click.option('--name', default=DEFAULT_STACK_NAME, help='AWS CloudFormation stack name')
+@click.option('--name', default=DEFAULT_STACK_NAME, help='AWS CloudFormation stack name.')
 @click.pass_context
 def cli(ctx, name):
     ctx.obj = {'stack': Stack(name)}
@@ -21,7 +21,7 @@ def cli(ctx, name):
 @cli.command()
 @click.pass_context
 def setup(ctx):
-    """Provision AWS infrastructure using CloudFormation"""
+    """Provision AWS infrastructure."""
 
     stack = ctx.obj['stack']
     print('☕️  Creating CloudFormation stack')
@@ -33,7 +33,7 @@ def setup(ctx):
 @click.option('--secret', help='Shared secret for updating hosts domain name alias')
 @click.pass_context
 def add(ctx, hostname, secret=None):
-    """Add new domain name"""
+    """Add new hostname."""
 
     stack = ctx.obj['stack']
     hosted_zone_id = find_hosted_zone_id(hostname)
@@ -61,7 +61,7 @@ def add(ctx, hostname, secret=None):
 @click.argument('hostname')
 @click.pass_context
 def remove(ctx, hostname):
-    """Remove domain name"""
+    """Remove hostname."""
 
     stack = ctx.obj['stack']
     function = Function(stack.get_output('LambdaFunctionName'))
@@ -78,7 +78,6 @@ def remove(ctx, hostname):
     # Remove hostname from configuration
     del config[hostname]
     env = env_from_config(config)
-
     hosted_zones = [host['hosted_zone_id'] for host in config.values()]
     hosted_zones = list(set(hosted_zones))
 
@@ -89,7 +88,7 @@ def remove(ctx, hostname):
 @cli.command()
 @click.pass_context
 def info(ctx):
-    """Print configuration"""
+    """Print configuration."""
 
     stack = ctx.obj['stack']
     function = Function(stack.function_name)
@@ -109,7 +108,7 @@ def info(ctx):
 @cli.command()
 @click.pass_context
 def destroy(ctx):
-    """Remove AWS infrastructure"""
+    """Remove AWS infrastructure."""
 
     stack = ctx.obj['stack']
     
