@@ -122,7 +122,3 @@ def destroy(ctx):
     # Remove stack
     click.echo('🔥  Removing CloudFormation stack')
     stack.destroy()
-
-
-if __name__ == '__main__':
-    cli()
