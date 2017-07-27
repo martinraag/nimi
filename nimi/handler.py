@@ -14,14 +14,14 @@ def lambda_handler(event, context):
     try:
         request = json.loads(event['body'])
     except json.JSONDecodeError:
-        return Response.bad_request('Invalid payload')
+        return Response.bad_request(error='Invalid payload')
 
     if not 'hostname' in request or not 'signature' in request:
-        return Response.bad_request('Invalid payload')
+        return Response.bad_request(error='Invalid payload')
 
     config = get_configuration(request['hostname'])
     if not config:
-        return Response.bad_request('Invalid hostname')
+        return Response.bad_request(error='Invalid hostname')
 
     signature = hmac.new(
         config['shared_secret'].encode('utf-8'),
@@ -29,14 +29,14 @@ def lambda_handler(event, context):
         hashlib.sha256
     ).hexdigest()
     if not hmac.compare_digest(signature, request['signature']):
-        return Response.unauthorized('Unauthorized')
+        return Response.unauthorized(error='Unauthorized')
 
     current_ip = get_alias_record(config['hosted_zone_id'], request['hostname'])
     request_ip = event['requestContext']['identity']['sourceIp']
     if not current_ip or not current_ip == request_ip:
         set_alias_record(config['hosted_zone_id'], request['hostname'], request_ip)
 
-    return Response.ok('Cool beans')
+    return Response.ok(ip=request_ip)
 
 
 def get_configuration(hostname):
@@ -93,20 +93,20 @@ class Response(object):
     """Helper class to create Lambda proxy response"""
 
     @classmethod
-    def ok(cls, message):
-        return cls.create(200, message)
+    def ok(cls, **kwargs):
+        return cls.create(200, **kwargs)
 
     @classmethod
-    def bad_request(cls, message):
-        return cls.create(400, message)
+    def bad_request(cls, **kwargs):
+        return cls.create(400, **kwargs)
 
     @classmethod
-    def unauthorized(cls, message):
-        return cls.create(401, message)
+    def unauthorized(cls, **kwargs):
+        return cls.create(401, **kwargs)
 
     @classmethod
-    def create(cls, statusCode, message):
+    def create(cls, statusCode, **kwargs):
         return {
             'statusCode': statusCode,
-            'body': json.dumps({'message': message})
+            'body': json.dumps(kwargs)
         }
