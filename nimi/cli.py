@@ -92,8 +92,7 @@ def info(ctx):
     """Print configuration"""
 
     stack = ctx.obj['stack']
-    api_url = stack.get_output('ApiUrl')
-    function = Function(stack.get_output('LambdaFunctionName'))
+    function = Function(stack.function_name)
     config = function.get_config()
 
     table_data = [
@@ -103,7 +102,7 @@ def info(ctx):
         current_ip = get_alias_record(options['hosted_zone_id'], hostname)
         table_data.append([hostname, options['hosted_zone_id'], current_ip, options['shared_secret']])
     table = SingleTable(table_data, 'Hosts')
-    click.echo('\n - API URL: {}\n'.format(api_url))
+    click.echo('\n - API URL: {}\n'.format(stack.api_url))
     click.echo(table.table)
 
 

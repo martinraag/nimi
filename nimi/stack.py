@@ -16,6 +16,14 @@ class Stack(object):
         self._client = boto3.client('cloudformation')
         self._stack = None
 
+    @property
+    def api_url(self):
+        return self._get_output('ApiUrl')
+
+    @property
+    def function_name(self):
+        return self._get_output('LambdaFunctionName')
+
     def exists(self):
         return self._get_stack() != None
 
@@ -42,7 +50,7 @@ class Stack(object):
         waiter = self._client.get_waiter('stack_delete_complete')
         waiter.wait(StackName=self._name)
 
-    def get_output(self, key):
+    def _get_output(self, key):
         if not self.exists():
             raise Exception('Stack {} does not exist. Cannot read outputs.'.format(self._name))
         for output in self._get_stack()['Outputs']:
