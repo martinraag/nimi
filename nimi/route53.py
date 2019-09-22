@@ -1,12 +1,8 @@
 import re
 import boto3
 
-
-# The following functions are imported here from the handler, instead of the other way around,
-# as it enables a simplified Lambda function deployment. By keeping the Lambda function a single
-# file, we don't need to package the modules for deployment or create an S3 bucket for storing said
-# package, which would become useless after the initial setup.
-from nimi.handler import get_alias_record, compare_record
+# The following functions are for interacting with Route53, but are included in handler.py to enable
+# a simplified single-file Lambda deplyment.
 
 
 client = boto3.client('route53')
@@ -39,7 +35,7 @@ class SubdomainIterator(object):
         if len(hostname) > 253:
             return False
         allowed = re.compile(r'(?!-)[A-Z\d\-\_]{1,63}(?<!-)$', re.IGNORECASE)
-        return all(allowed.match(x) for x in hostname.split('.'))
+        return all(allowed.match(part) for part in hostname.split('.'))
 
 
 def find_hosted_zone(hostname):
