@@ -40,7 +40,7 @@ def add(ctx, hostname, secret=None):
     secret = secret if secret else os.urandom(16).hex()
 
     # Update existing function environment with new values
-    function = Function(stack.get_output('LambdaFunctionName'))
+    function = Function(stack.function_name)
     config = function.get_config()
     config[hostname] = {
         'hosted_zone_id': hosted_zone_id,
@@ -64,7 +64,7 @@ def remove(ctx, hostname):
     """Remove hostname."""
 
     stack = ctx.obj['stack']
-    function = Function(stack.get_output('LambdaFunctionName'))
+    function = Function(stack.function_name)
     config = function.get_config()
 
     if not hostname in config:
@@ -111,7 +111,7 @@ def destroy(ctx):
     """Remove AWS infrastructure."""
 
     stack = ctx.obj['stack']
-    
+
     # Remove Route53 records
     function = Function(stack.function_name)
     config = function.get_config()
