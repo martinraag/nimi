@@ -87,6 +87,9 @@ def add(ctx, hostname, secret=None):
 
     stack = ctx.obj['stack']
     hosted_zone_id = find_hosted_zone_id(hostname)
+    if not hosted_zone_id:
+        click.echo(f'🤔  No hosted zone found for domain {hostname}')
+        return
     secret = secret if secret else os.urandom(16).hex()
 
     # Update existing function environment with new values
