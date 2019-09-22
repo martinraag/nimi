@@ -47,6 +47,33 @@ def get_configuration(hostname):
     return {key.split('__')[1].lower(): value for key, value in os.environ.items() if key in options}
 
 
+class Response(object):
+    """Helper class to create Lambda proxy response"""
+
+    @classmethod
+    def ok(cls, **kwargs):
+        return cls.create(200, **kwargs)
+
+    @classmethod
+    def bad_request(cls, **kwargs):
+        return cls.create(400, **kwargs)
+
+    @classmethod
+    def unauthorized(cls, **kwargs):
+        return cls.create(401, **kwargs)
+
+    @classmethod
+    def create(cls, statusCode, **kwargs):
+        return {
+            'statusCode': statusCode,
+            'body': json.dumps(kwargs)
+        }
+
+
+# The following functions are for interacting with Route53 and are included in handler.py to enable
+# a simplified single-file Lambda deplyment.
+
+
 def get_record(zone_id, record_name, record_type):
     record_sets = route53.list_resource_record_sets(
         HostedZoneId=zone_id,
@@ -94,26 +121,3 @@ def set_alias_record(zone_id, record_name, ip_address):
 
 def compare_record(record_name, hostname):
     return '{}.'.format(hostname) == record_name
-
-
-class Response(object):
-    """Helper class to create Lambda proxy response"""
-
-    @classmethod
-    def ok(cls, **kwargs):
-        return cls.create(200, **kwargs)
-
-    @classmethod
-    def bad_request(cls, **kwargs):
-        return cls.create(400, **kwargs)
-
-    @classmethod
-    def unauthorized(cls, **kwargs):
-        return cls.create(401, **kwargs)
-
-    @classmethod
-    def create(cls, statusCode, **kwargs):
-        return {
-            'statusCode': statusCode,
-            'body': json.dumps(kwargs)
-        }
