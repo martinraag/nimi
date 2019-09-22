@@ -6,7 +6,7 @@ import boto3
 from nimi.handler import get_alias_record, get_record, compare_record
 
 
-client = boto3.client('route53')
+client = boto3.client("route53")
 
 
 class SubdomainIterator(object):
@@ -15,8 +15,8 @@ class SubdomainIterator(object):
     def __init__(self, hostname):
         normalised_hostname = hostname.encode("idna").decode()
         if not self._is_valid_hostname(normalised_hostname):
-            raise Exception('Invalid hostname')
-        self.hostname_parts = hostname.split('.')
+            raise Exception("Invalid hostname")
+        self.hostname_parts = hostname.split(".")
 
     def __iter__(self):
         self.current = -len(self.hostname_parts)
@@ -28,53 +28,53 @@ class SubdomainIterator(object):
         else:
             current = self.current
             self.current += 1
-            return '.'.join(self.hostname_parts[current:])
+            return ".".join(self.hostname_parts[current:])
 
     def _is_valid_hostname(self, hostname):
-        if hostname[-1] == '.':
+        if hostname[-1] == ".":
             hostname = hostname[:-1]
         if len(hostname) > 253:
             return False
-        allowed = re.compile(r'(?!-)[A-Z\d\-\_]{1,63}(?<!-)$', re.IGNORECASE)
-        return all(allowed.match(part) for part in hostname.split('.'))
+        allowed = re.compile(r"(?!-)[A-Z\d\-\_]{1,63}(?<!-)$", re.IGNORECASE)
+        return all(allowed.match(part) for part in hostname.split("."))
 
 
 def find_hosted_zone(hostname):
     # TODO: Support pagination for > 100 zones
-    hosted_zones = client.list_hosted_zones()['HostedZones']
+    hosted_zones = client.list_hosted_zones()["HostedZones"]
     if len(hosted_zones) < 1:
         return
 
     subdomains = SubdomainIterator(hostname)
     for subdomain in subdomains:
-        match = [zone for zone in hosted_zones if compare_record(zone['Name'], subdomain)]
+        match = [
+            zone for zone in hosted_zones if compare_record(zone["Name"], subdomain)
+        ]
         if match:
             return match[0]
 
 
 def get_ns_record(hosted_zone_id, record_name):
-    return get_record(hosted_zone_id, record_name, 'NS')
+    return get_record(hosted_zone_id, record_name, "NS")
 
 
 def wait_resource_record_sets_changed(response):
-    if response['ChangeInfo']['Status'] == 'INSYNC':
+    if response["ChangeInfo"]["Status"] == "INSYNC":
         return
-    waiter = client.get_waiter('resource_record_sets_changed')
-    return waiter.wait(Id=response['ChangeInfo']['Id'])
+    waiter = client.get_waiter("resource_record_sets_changed")
+    return waiter.wait(Id=response["ChangeInfo"]["Id"])
 
 
 def create_hosted_zone(domain):
     """Creates new hosted zone for provided domain and returns list of name servers."""
 
     response = client.create_hosted_zone(
-        Name = domain,
-        CallerReference = f'nimi-import-{domain}',
-        HostedZoneConfig = {
-            'Comment': 'Hosted zone create by Nimi Dynamic DNS client.'
-        }
+        Name=domain,
+        CallerReference=f"nimi-import-{domain}",
+        HostedZoneConfig={"Comment": "Hosted zone create by Nimi Dynamic DNS client."},
     )
     wait_resource_record_sets_changed(response)
-    name_servers = get_ns_record(response['HostedZone']['Id'], domain)
+    name_servers = get_ns_record(response["HostedZone"]["Id"], domain)
     return name_servers
 
 
@@ -89,7 +89,7 @@ def delete_hosted_zone(domain):
 def find_hosted_zone_id(hostname):
     hosted_zone = find_hosted_zone(hostname)
     if hosted_zone:
-        return hosted_zone['Id'].split('/')[2]
+        return hosted_zone["Id"].split("/")[2]
 
 
 def remove_alias_record(zone_id, record_name):
@@ -100,21 +100,17 @@ def remove_alias_record(zone_id, record_name):
     response = client.change_resource_record_sets(
         HostedZoneId=zone_id,
         ChangeBatch={
-            'Changes': [
+            "Changes": [
                 {
-                    'Action': 'DELETE',
-                    'ResourceRecordSet': {
-                        'Name': record_name,
-                        'Type': 'A',
-                        'TTL': 900,
-                        'ResourceRecords': [
-                            {
-                                'Value': ip_address
-                            }
-                        ]
-                    }
+                    "Action": "DELETE",
+                    "ResourceRecordSet": {
+                        "Name": record_name,
+                        "Type": "A",
+                        "TTL": 900,
+                        "ResourceRecords": [{"Value": ip_address}],
+                    },
                 }
             ]
-        }
+        },
     )
     wait_resource_record_sets_changed(response)
