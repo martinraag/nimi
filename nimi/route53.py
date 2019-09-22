@@ -51,6 +51,13 @@ def find_hosted_zone(hostname):
             return match[0]
 
 
+def wait_resource_record_sets_changed(response):
+    if response['ChangeInfo']['Status'] == 'INSYNC':
+        return
+    waiter = client.get_waiter('resource_record_sets_changed')
+    return waiter.wait(Id=response['ChangeInfo']['Id'])
+
+
 def find_hosted_zone_id(hostname):
     hosted_zone = find_hosted_zone(hostname)
     if hosted_zone:
@@ -62,7 +69,7 @@ def remove_alias_record(zone_id, record_name):
     if not ip_address:
         return
 
-    client.change_resource_record_sets(
+    response = client.change_resource_record_sets(
         HostedZoneId=zone_id,
         ChangeBatch={
             'Changes': [
@@ -82,3 +89,4 @@ def remove_alias_record(zone_id, record_name):
             ]
         }
     )
+    wait_resource_record_sets_changed(response)
