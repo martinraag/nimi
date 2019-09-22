@@ -41,7 +41,7 @@ def lambda_handler(event, context):
 
 def get_configuration(hostname):
     env_prefix = hostname.replace(".", "_").upper()
-    options = set(["{}__{}".format(env_prefix, option) for option in CONFIG_OPTIONS])
+    options = set([f"{env_prefix}__{option}" for option in CONFIG_OPTIONS])
     if not options.issubset(set(os.environ.keys())):
         return
     return {
@@ -117,4 +117,4 @@ def set_alias_record(zone_id, record_name, ip_address):
 
 
 def compare_record(record_name, hostname):
-    return "{}.".format(hostname) == record_name
+    return f"{hostname}." == record_name

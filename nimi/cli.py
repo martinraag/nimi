@@ -128,7 +128,7 @@ def remove(ctx, hostname):
     config = function.get_config()
 
     if not hostname in config:
-        click.echo("🤔  Hostname {} not found in configuration.".format(hostname))
+        click.echo(f"🤔  Hostname {hostname} not found in configuration.")
         return
 
     # Remove Route53 record
@@ -161,7 +161,7 @@ def info(ctx):
             [hostname, options["hosted_zone_id"], current_ip, options["shared_secret"]]
         )
     table = SingleTable(table_data, "Hosts")
-    click.echo("\n - API URL: {}\n".format(stack.api_url))
+    click.echo(f"\n - API URL: {stack.api_url}\n")
     click.echo(table.table)
 
 
@@ -176,7 +176,7 @@ def destroy(ctx):
     function = Function(stack.function_name)
     config = function.get_config()
     for hostname, options in config.items():
-        click.echo("🔥  Removing DNS record for {}".format(hostname))
+        click.echo(f"🔥  Removing DNS record for {hostname}")
         remove_alias_record(options["hosted_zone_id"], hostname)
 
     # Remove stack

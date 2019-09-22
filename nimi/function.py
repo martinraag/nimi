@@ -19,7 +19,7 @@ def env_from_config(hosts):
     for host, options in hosts.items():
         key_prefix = host.replace(".", "_").upper()
         for key, value in options.items():
-            env["{}__{}".format(key_prefix, key.upper())] = value
+            env[f"{key_prefix}__{key.upper()}"] = value
     return env
 
 
