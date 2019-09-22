@@ -106,15 +106,8 @@ def add(ctx, hostname, secret=None):
     function = Function(stack.function_name)
     config = function.get_config()
     config[hostname] = {"hosted_zone_id": hosted_zone_id, "shared_secret": secret}
-    env = env_from_config(config)
-
-    # Create a list of unique hosted zone id's
-    hosted_zones = [host["hosted_zone_id"] for host in config.values()]
-    hosted_zones.append(hosted_zone_id)
-    hosted_zones = list(set(hosted_zones))
-
     click.echo("☕️  Updating CloudFormation stack")
-    stack.update(hosted_zones=hosted_zones, env=env)
+    stack.update(**stack_options(config))
 
 
 @cli.command()
@@ -137,12 +130,8 @@ def remove(ctx, hostname):
 
     # Remove hostname from configuration
     del config[hostname]
-    env = env_from_config(config)
-    hosted_zones = [host["hosted_zone_id"] for host in config.values()]
-    hosted_zones = list(set(hosted_zones))
-
     click.echo("☕️  Updating CloudFormation stack")
-    stack.update(hosted_zones=hosted_zones, env=env)
+    stack.update(**stack_options(config))
 
 
 @cli.command()
