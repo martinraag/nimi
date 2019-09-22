@@ -3,6 +3,7 @@ import boto3
 
 # The following functions are for interacting with Route53, but are included in handler.py to enable
 # a simplified single-file Lambda deplyment.
+from nimi.handler import get_alias_record, get_record, compare_record
 
 
 client = boto3.client('route53')
@@ -51,11 +52,38 @@ def find_hosted_zone(hostname):
             return match[0]
 
 
+def get_ns_record(hosted_zone_id, record_name):
+    return get_record(hosted_zone_id, record_name, 'NS')
+
+
 def wait_resource_record_sets_changed(response):
     if response['ChangeInfo']['Status'] == 'INSYNC':
         return
     waiter = client.get_waiter('resource_record_sets_changed')
     return waiter.wait(Id=response['ChangeInfo']['Id'])
+
+
+def create_hosted_zone(domain):
+    """Creates new hosted zone for provided domain and returns list of name servers."""
+
+    response = client.create_hosted_zone(
+        Name = domain,
+        CallerReference = f'nimi-import-{domain}',
+        HostedZoneConfig = {
+            'Comment': 'Hosted zone create by Nimi Dynamic DNS client.'
+        }
+    )
+    wait_resource_record_sets_changed(response)
+    name_servers = get_ns_record(response['HostedZone']['Id'], domain)
+    return name_servers
+
+
+def delete_hosted_zone(domain):
+    hosted_zone_id = find_hosted_zone_id(domain)
+    if not hosted_zone_id:
+        return
+    response = client.delete_hosted_zone(Id=hosted_zone_id)
+    wait_resource_record_sets_changed(response)
 
 
 def find_hosted_zone_id(hostname):
