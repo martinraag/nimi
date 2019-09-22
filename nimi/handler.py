@@ -47,19 +47,26 @@ def get_configuration(hostname):
     return {key.split('__')[1].lower(): value for key, value in os.environ.items() if key in options}
 
 
-def get_alias_record(zone_id, record_name):
+def get_record(zone_id, record_name, record_type):
     record_sets = route53.list_resource_record_sets(
         HostedZoneId=zone_id,
         StartRecordName=record_name,
-        StartRecordType='A',
-        MaxItems='2'
+        StartRecordType=record_type
     )
+    # Filter all ResourceRecords's that ResourceRecordSets' Name and Type match
     records = [
-        record_set['ResourceRecords'] for record_set in record_sets['ResourceRecordSets'] 
-        if compare_record(record_set['Name'], record_name)
+        record_set['ResourceRecords'] for record_set in record_sets['ResourceRecordSets']
+        if compare_record(record_set['Name'], record_name) and record_set['Type'] == record_type
     ]
-    # TODO: Support multiple values
-    return records[0][0]['Value'] if records else None
+    # Extract all values from mathced ResourceRecords
+    values = [record['Value'] for _ in records for record in _]
+    return values
+
+
+def get_alias_record(zone_id, record_name):
+    record = get_record(zone_id, record_name, 'A')
+    if record:
+        return record[0]
 
 
 def set_alias_record(zone_id, record_name, ip_address):
