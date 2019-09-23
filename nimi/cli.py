@@ -40,6 +40,7 @@ def setup(ctx):
     stack = ctx.obj["stack"]
     if stack.exists():
         click.echo("🙄  Cloudformation stack already exists")
+        return
     click.echo("☕️  Creating CloudFormation stack")
     stack.create()
 
