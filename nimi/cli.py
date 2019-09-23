@@ -17,6 +17,7 @@ from nimi.client import client
 
 
 DEFAULT_STACK_NAME = "nimi-dynamic-dns"
+DEFAULT_TTL = 900
 
 
 @click.group()
@@ -52,7 +53,7 @@ def import_domain(ctx, domain):
     hosted_zone_id = find_hosted_zone_id(domain)
     if hosted_zone_id:
         click.echo(f"🙄  Hosted zone already exists for domain {domain}")
-        name_servers = get_ns_record(hosted_zone_id, domain)
+        name_servers = get_ns_record(hosted_zone_id, domain).values
     else:
         click.echo(f"☕️  Creating Route53 hosted zone for domain {domain}")
         name_servers = create_hosted_zone(domain)
@@ -94,9 +95,10 @@ def eject(ctx, domain):
 
 @cli.command()
 @click.argument("hostname")
+@click.option("--ttl", default=DEFAULT_TTL, help="TTL to set for DNS A record")
 @click.option("--secret", help="Shared secret for updating hosts domain name alias")
 @click.pass_context
-def add(ctx, hostname, secret=None):
+def add(ctx, hostname, ttl, secret=None):
     """Add new hostname."""
 
     stack, config = get_stack(ctx)
@@ -107,7 +109,11 @@ def add(ctx, hostname, secret=None):
     secret = secret if secret else os.urandom(16).hex()
 
     # Update existing function environment with new values
-    config[hostname] = {"hosted_zone_id": hosted_zone_id, "shared_secret": secret}
+    config[hostname] = {
+        "hosted_zone_id": hosted_zone_id,
+        "shared_secret": secret,
+        "ttl": ttl,
+    }
     click.echo("☕️  Updating CloudFormation stack")
     stack.update(**stack_options(config))
 
@@ -141,11 +147,19 @@ def info(ctx):
     """Print configuration."""
 
     stack, config = get_stack(ctx)
-    table_data = [["Hostname", "Hosted Zone Id", "Current IP", "Shared Secret"]]
+    table_data = [["Hostname", "Hosted Zone Id", "Current IP", "TTL", "Shared Secret"]]
     for hostname, options in config.items():
-        current_ip = get_alias_record(options["hosted_zone_id"], hostname)
+        record = get_alias_record(options["hosted_zone_id"], hostname)
+        current_ip = "\n".join(record.values) if record else ""
+        ttl = record.ttl if record else options["ttl"]
         table_data.append(
-            [hostname, options["hosted_zone_id"], current_ip, options["shared_secret"]]
+            [
+                hostname,
+                options["hosted_zone_id"],
+                current_ip,
+                ttl,
+                options["shared_secret"],
+            ]
         )
     table = SingleTable(table_data, "Hosts")
     click.echo(f"\n - API URL: {stack.api_url}\n")
@@ -190,3 +204,7 @@ def stack_options(config):
     hosted_zones = [host["hosted_zone_id"] for host in config.values()]
     hosted_zones = list(set(hosted_zones))
     return {"hosted_zoned": hosted_zones, "env": env}
+
+
+if __name__ == "__main__":
+    cli()

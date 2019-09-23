@@ -1,3 +1,4 @@
+import collections
 import hashlib
 import hmac
 import json
@@ -6,7 +7,8 @@ import os
 import boto3
 
 
-CONFIG_OPTIONS = ["HOSTED_ZONE_ID", "SHARED_SECRET"]
+CONFIG_OPTIONS = ["HOSTED_ZONE_ID", "SHARED_SECRET", "TTL"]
+Record = collections.namedtuple("Record", ["type", "ttl", "values"])
 route53 = boto3.client("route53")
 
 
@@ -31,15 +33,21 @@ def lambda_handler(event, context):
     if not hmac.compare_digest(signature, request["signature"]):
         return Response.unauthorized(error="Unauthorized")
 
-    current_ip = get_alias_record(config["hosted_zone_id"], request["hostname"])
+    record = get_alias_record(config["hosted_zone_id"], request["hostname"])
     request_ip = event["requestContext"]["identity"]["sourceIp"]
-    if not current_ip or not current_ip == request_ip:
-        set_alias_record(config["hosted_zone_id"], request["hostname"], request_ip)
+    if not record or not current_ip in record.values:
+        set_alias_record(
+            config["hosted_zone_id"], request["hostname"], request_ip, config["ttl"]
+        )
 
     return Response.ok(ip=request_ip)
 
 
 def get_configuration(hostname):
+    """Reads configuration options from environment and returns a dict of options or None.
+    Expects all options to be configured for a hostname.
+    """
+
     env_prefix = hostname.replace(".", "_").upper()
     options = set([f"{env_prefix}__{option}" for option in CONFIG_OPTIONS])
     if not options.issubset(set(os.environ.keys())):
@@ -76,28 +84,31 @@ class Response(object):
 
 
 def get_record(zone_id, record_name, record_type):
+    """Query records from zone id matching name and type. Returns Record object or None."""
+
     record_sets = route53.list_resource_record_sets(
         HostedZoneId=zone_id, StartRecordName=record_name, StartRecordType=record_type
     )
-    # Filter all ResourceRecords's that ResourceRecordSets' Name and Type match
-    records = [
-        record_set["ResourceRecords"]
-        for record_set in record_sets["ResourceRecordSets"]
-        if compare_record(record_set["Name"], record_name)
-        and record_set["Type"] == record_type
-    ]
-    # Extract all values from mathced ResourceRecords
-    values = [record["Value"] for _ in records for record in _]
-    return values
+    for record_set in record_sets["ResourceRecordSets"]:
+        if (
+            not compare_record(record_set["Name"], record_name)
+            or record_set["Type"] != record_type
+        ):
+            continue
+        values = [record["Value"] for record in record_set["ResourceRecords"]]
+        # Return first matching record, there should only ever be one
+        return Record(record_type, record_set["TTL"], values)
 
 
 def get_alias_record(zone_id, record_name):
-    record = get_record(zone_id, record_name, "A")
-    if record:
-        return record[0]
+    """Query A records and return first matching Record."""
+
+    return get_record(zone_id, record_name, "A")
 
 
-def set_alias_record(zone_id, record_name, ip_address):
+def set_alias_record(zone_id, record_name, ip_address, ttl):
+    """Creates new change request to upsert an A record."""
+
     route53.change_resource_record_sets(
         HostedZoneId=zone_id,
         ChangeBatch={
@@ -107,7 +118,7 @@ def set_alias_record(zone_id, record_name, ip_address):
                     "ResourceRecordSet": {
                         "Name": record_name,
                         "Type": "A",
-                        "TTL": 900,
+                        "TTL": ttl,
                         "ResourceRecords": [{"Value": ip_address}],
                     },
                 }

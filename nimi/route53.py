@@ -74,7 +74,8 @@ def create_hosted_zone(domain):
         HostedZoneConfig={"Comment": "Hosted zone create by Nimi Dynamic DNS client."},
     )
     wait_resource_record_sets_changed(response)
-    name_servers = get_ns_record(response["HostedZone"]["Id"], domain)
+    # TODO: NS records should always be created by AWS, but would be good to handle a missing record
+    name_servers = get_ns_record(response["HostedZone"]["Id"], domain).values
     return name_servers
 
 
@@ -93,8 +94,8 @@ def find_hosted_zone_id(hostname):
 
 
 def remove_alias_record(zone_id, record_name):
-    ip_address = get_alias_record(zone_id, record_name)
-    if not ip_address:
+    record = get_alias_record(zone_id, record_name)
+    if not record:
         return
 
     response = client.change_resource_record_sets(
@@ -106,8 +107,10 @@ def remove_alias_record(zone_id, record_name):
                     "ResourceRecordSet": {
                         "Name": record_name,
                         "Type": "A",
-                        "TTL": 900,
-                        "ResourceRecords": [{"Value": ip_address}],
+                        "TTL": record.ttl,
+                        "ResourceRecords": [
+                            {"Value": value} for value in record.values
+                        ],
                     },
                 }
             ]
