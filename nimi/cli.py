@@ -77,7 +77,7 @@ def eject(ctx, domain):
     hosts = [host for host in config if domain == ".".join(host.split(".")[-2:])]
     if hosts:
         click.confirm(
-            f'😟  Remove dyanmic DNS hosts and records: { "".join(hosts) }?', abort=True
+            f'😟  Remove dynamic DNS hosts and records: { "".join(hosts) }?', abort=True
         )
         for hostname in hosts:
             click.echo(f"🔥  Removing alias record for {hostname}")
@@ -124,7 +124,8 @@ def remove(ctx, hostname):
         click.echo(f"🤔  Hostname {hostname} not found in configuration.")
         return
 
-    # Remove Route53 record
+    # Remove alias record
+    click.confirm(f"😟  Remove DNS record for {hostname}?", abort=True)
     click.echo("🔥  Removing DNS record")
     remove_alias_record(config[hostname]["hosted_zone_id"], hostname)
 
@@ -157,6 +158,9 @@ def destroy(ctx):
     """Remove AWS infrastructure."""
 
     stack, config = get_stack(ctx)
+    click.confirm(
+        "😟  Delete all configured records and CloudFormation stack?", abort=True
+    )
     for hostname, options in config.items():
         click.echo(f"🔥  Removing DNS record for {hostname}")
         remove_alias_record(options["hosted_zone_id"], hostname)
