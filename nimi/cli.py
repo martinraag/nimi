@@ -13,6 +13,7 @@ from nimi.route53 import (
     remove_alias_record,
 )
 from nimi.function import Function, env_from_config
+from nimi.client import client
 
 
 DEFAULT_STACK_NAME = "nimi-dynamic-dns"
@@ -25,6 +26,9 @@ DEFAULT_STACK_NAME = "nimi-dynamic-dns"
 @click.pass_context
 def cli(ctx, name):
     ctx.obj = {"stack": Stack(name)}
+
+
+cli.add_command(client)
 
 
 @cli.command()
