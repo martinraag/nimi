@@ -204,7 +204,7 @@ def stack_options(config):
     env = env_from_config(config)
     hosted_zones = [host["hosted_zone_id"] for host in config.values()]
     hosted_zones = list(set(hosted_zones))
-    return {"hosted_zoned": hosted_zones, "env": env}
+    return {"hosted_zones": hosted_zones, "env": env}
 
 
 if __name__ == "__main__":
