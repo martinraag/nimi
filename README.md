@@ -10,8 +10,11 @@ by some of the shortcomings of projects I reviewed:
 - The clients interact directly with the cloud providers API, requiring appropriate credentials
   to be configured on each host.
 
-Nimi aims to be easy to setup, manage and destroy. The client does not interact with any AWS API's
-directly and can be deployed on any host with a bit more peace of mind.
+Nimi aims to be easy to setup, manage and destroy - the tool provisions and tears down all the
+required AWS infrastructure. The dynamic DNS client does not interact with any AWS API's directly
+and can be deployed on any host with a bit more peace of mind.
+
+[![asciicast](https://asciinema.org/a/KO9RCVwMeQ05c8eCiC615UWpa.svg)](https://asciinema.org/a/KO9RCVwMeQ05c8eCiC615UWpa)
 
 ## Installation
 
