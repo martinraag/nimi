@@ -3,7 +3,7 @@ import os
 import click
 from terminaltables import SingleTable
 
-from nimi.stack import Stack
+from nimi.stack import Stack, StackNotFound
 from nimi.route53 import (
     create_hosted_zone,
     delete_hosted_zone,
@@ -33,7 +33,9 @@ def setup(ctx):
     """Provision AWS infrastructure."""
 
     stack = ctx.obj["stack"]
-    print("☕️  Creating CloudFormation stack")
+    if stack.exists():
+        click.echo("🙄  Cloudformation stack already exists")
+    click.echo("☕️  Creating CloudFormation stack")
     stack.create()
 
 
@@ -65,9 +67,7 @@ def eject(ctx, domain):
     """Delete all A records and hosted hosted zone for domain, remove associated dynamic DNS host
     names from configuration."""
 
-    stack = ctx.obj["stack"]
-    function = Function(stack.function_name)
-    config = function.get_config()
+    stack, config = get_stack(ctx)
 
     # Find all hosts configured with domain
     hosts = [host for host in config if domain == ".".join(host.split(".")[-2:])]
@@ -95,7 +95,7 @@ def eject(ctx, domain):
 def add(ctx, hostname, secret=None):
     """Add new hostname."""
 
-    stack = ctx.obj["stack"]
+    stack, config = get_stack(ctx)
     hosted_zone_id = find_hosted_zone_id(hostname)
     if not hosted_zone_id:
         click.echo(f"🤔  No hosted zone found for domain {hostname}")
@@ -103,8 +103,6 @@ def add(ctx, hostname, secret=None):
     secret = secret if secret else os.urandom(16).hex()
 
     # Update existing function environment with new values
-    function = Function(stack.function_name)
-    config = function.get_config()
     config[hostname] = {"hosted_zone_id": hosted_zone_id, "shared_secret": secret}
     click.echo("☕️  Updating CloudFormation stack")
     stack.update(**stack_options(config))
@@ -116,9 +114,7 @@ def add(ctx, hostname, secret=None):
 def remove(ctx, hostname):
     """Remove hostname."""
 
-    stack = ctx.obj["stack"]
-    function = Function(stack.function_name)
-    config = function.get_config()
+    stack, config = get_stack(ctx)
 
     if not hostname in config:
         click.echo(f"🤔  Hostname {hostname} not found in configuration.")
@@ -139,10 +135,7 @@ def remove(ctx, hostname):
 def info(ctx):
     """Print configuration."""
 
-    stack = ctx.obj["stack"]
-    function = Function(stack.function_name)
-    config = function.get_config()
-
+    stack, config = get_stack(ctx)
     table_data = [["Hostname", "Hosted Zone Id", "Current IP", "Shared Secret"]]
     for hostname, options in config.items():
         current_ip = get_alias_record(options["hosted_zone_id"], hostname)
@@ -159,11 +152,7 @@ def info(ctx):
 def destroy(ctx):
     """Remove AWS infrastructure."""
 
-    stack = ctx.obj["stack"]
-
-    # Remove Route53 records
-    function = Function(stack.function_name)
-    config = function.get_config()
+    stack, config = get_stack(ctx)
     for hostname, options in config.items():
         click.echo(f"🔥  Removing DNS record for {hostname}")
         remove_alias_record(options["hosted_zone_id"], hostname)
@@ -171,6 +160,21 @@ def destroy(ctx):
     # Remove stack
     click.echo("🔥  Removing CloudFormation stack")
     stack.destroy()
+
+
+def get_stack(ctx):
+    stack = ctx.obj["stack"]
+    if not stack.exists():
+        click.echo(
+            (
+                "🙄  CloudFormation stack not found. "
+                "Create a stack first via the 'nimi setup' command."
+            )
+        )
+        ctx.abort()
+    function = Function(stack.function_name)
+    config = function.get_config()
+    return stack, config
 
 
 def stack_options(config):

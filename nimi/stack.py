@@ -9,6 +9,14 @@ TEMPLATE_FILE = "template.yml"
 FUNCTION_FILE = "handler.py"
 
 
+class StackNotFound(Exception):
+    pass
+
+
+class DuplicateStack(Exception):
+    pass
+
+
 class Stack(object):
     def __init__(self, name):
         self._name = name
@@ -28,7 +36,7 @@ class Stack(object):
 
     def create(self):
         if self.exists():
-            raise Exception(f"Stack {self._name} already exists. Cannot create.")
+            raise DuplicateStack(f"Stack {self._name} already exists. Cannot create.")
         params = self._create_stack_parameters()
         self._client.create_stack(**params)
         waiter = self._client.get_waiter("stack_create_complete")
@@ -36,7 +44,7 @@ class Stack(object):
 
     def update(self, **kwargs):
         if not self.exists():
-            raise Exception(f"Stack {self._name} does not exist. Cannot update.")
+            raise StackNotFound(f"Stack {self._name} does not exist. Cannot update.")
         params = self._create_stack_parameters(**kwargs)
         self._client.update_stack(**params)
         waiter = self._client.get_waiter("stack_update_complete")
@@ -51,7 +59,9 @@ class Stack(object):
 
     def _get_output(self, key):
         if not self.exists():
-            raise Exception(f"Stack {self._name} does not exist. Cannot read outputs.")
+            raise StackNotFound(
+                f"Stack {self._name} does not exist. Cannot read outputs."
+            )
         for output in self._get_stack()["Outputs"]:
             if output["OutputKey"] == key:
                 return output["OutputValue"]
