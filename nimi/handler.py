@@ -37,7 +37,10 @@ def lambda_handler(event, context):
     request_ip = event["requestContext"]["identity"]["sourceIp"]
     if not record or not current_ip in record.values:
         set_alias_record(
-            config["hosted_zone_id"], request["hostname"], request_ip, config["ttl"]
+            config["hosted_zone_id"],
+            request["hostname"],
+            request_ip,
+            int(config["ttl"]),
         )
 
     return Response.ok(ip=request_ip)

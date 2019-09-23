@@ -96,7 +96,9 @@ def eject(ctx, domain):
 
 @cli.command()
 @click.argument("hostname")
-@click.option("--ttl", default=DEFAULT_TTL, help="TTL to set for DNS A record")
+@click.option(
+    "--ttl", default=DEFAULT_TTL, type=int, help="TTL to set for DNS A record"
+)
 @click.option("--secret", help="Shared secret for updating hosts domain name alias")
 @click.pass_context
 def add(ctx, hostname, ttl, secret=None):
