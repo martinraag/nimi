@@ -58,7 +58,7 @@ def import_domain(ctx, domain):
         name_servers = create_hosted_zone(domain)
     table_data = [
         ["Domain", "Hosted Zone Id", "Name servers"],
-        [domain, hosted_zone_id, " ".join(name_servers)],
+        [domain, hosted_zone_id, "\n".join(name_servers)],
     ]
     table = SingleTable(table_data, "Domain")
     click.echo(table.table)
