@@ -13,6 +13,7 @@ from nimi.route53 import (
     remove_alias_record,
 )
 from nimi.function import Function, env_from_config
+from nimi.client import client
 
 
 DEFAULT_STACK_NAME = "nimi-dynamic-dns"
@@ -25,6 +26,9 @@ DEFAULT_STACK_NAME = "nimi-dynamic-dns"
 @click.pass_context
 def cli(ctx, name):
     ctx.obj = {"stack": Stack(name)}
+
+
+cli.add_command(client)
 
 
 @cli.command()
@@ -160,6 +164,25 @@ def destroy(ctx):
     # Remove stack
     click.echo("🔥  Removing CloudFormation stack")
     stack.destroy()
+
+
+@click.group()
+def client():
+    pass
+
+
+@client.command()
+@click.argument("url", envvar="NIMI_ENDPOINT_URL")
+@click.argument("hostname", envvar="NIMI_HOSTNAME")
+@click.argument("secret", envvar="NIMI_SECRET")
+def ping(url, hostname, secret):
+    """Call the Lambda function to update the IP of the hostname"""
+
+    signature = hmac.new(
+        secret.encode("utf-8"), hostname.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+    payload = {"hostname": hostname, "signature": signature}
+    requests.put(url, json.dumps(payload))
 
 
 def get_stack(ctx):
