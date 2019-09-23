@@ -13,7 +13,7 @@ def client():
 
 
 @client.command()
-@click.argument("url", envvar="NIMI_ENDPOINT_URL")
+@click.argument("url", envvar="NIMI_URL")
 @click.argument("hostname", envvar="NIMI_HOSTNAME")
 @click.argument("secret", envvar="NIMI_SECRET")
 def ping(url, hostname, secret):
