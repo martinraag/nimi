@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "nimi"
 version = "0.1.2"
-description = "Dynamic DNS on AWS"
+description = "Painless Dynamic DNS with AWS"
 authors = ["Martin Raag <hi@mraag.xyz>"]
 license = "MIT"
 readme = "README.md"

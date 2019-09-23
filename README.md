@@ -1,4 +1,4 @@
-# Nimi - Dynamic DNS on AWS
+# Nimi - Painless Dynamic DNS with AWS
 
 Nimi is yet another self-hosted dynamic DNS solution, built using Python, AWS Route53, Lambda
 and API Gateway.
